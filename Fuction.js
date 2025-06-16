@@ -4,25 +4,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const dateInput = document.getElementById('day');
   const weekDisplay = document.getElementById('weekDisplay');
 
-  const weekRanges = [
-    { week: "Week 1", start: "2025-06-24", end: "2025-06-27" },
-    { week: "Week 2", start: "2025-07-01", end: "2025-07-04" },
-    { week: "Week 3", start: "2025-07-08", end: "2025-07-11" },
-    { week: "Week 4", start: "2025-07-15", end: "2025-07-18" },
-    { week: "Week 5", start: "2025-07-22", end: "2025-07-25" },
-    { week: "Week 6", start: "2025-07-29", end: "2025-07-31" },
-  ];
-
-  function getCurrentWeek() {
-    const now = new Date();
-    return weekRanges.find(w => new Date(w.start) <= now && now <= new Date(w.end));
-  }
-
-  function getWeekByDate(dateStr) {
-    const date = new Date(dateStr);
-    return weekRanges.find(w => new Date(w.start) <= date && date <= new Date(w.end));
-  }
-
   function saveTableData() {
     const data = [];
     for (const row of tableBody.rows) {
@@ -41,12 +22,15 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function insertRow(week, day, tutor, topic, activities, attendees) {
-    // Remove existing "End of Week X" row
-    Array.from(tableBody.children).forEach(row => {
-      if (row.classList.contains('week-end-row') && row.textContent.includes(week)) {
-        row.remove();
-      }
-    });
+    const lastRow = tableBody.lastElementChild;
+    const lastWeek = lastRow ? lastRow.cells[0]?.textContent?.trim() : null;
+
+    if (lastWeek && lastWeek !== week) {
+      const weekEndRow = document.createElement('tr');
+      weekEndRow.classList.add('week-end-row');
+      weekEndRow.innerHTML = `<td colspan="7" class="week-end-label">End of ${lastWeek}</td>`;
+      tableBody.appendChild(weekEndRow);
+    }
 
     const newRow = document.createElement('tr');
     newRow.innerHTML = `
@@ -61,21 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <button class="action-btn delete-btn">Delete</button>
       </td>
     `;
-
-    const rows = Array.from(tableBody.querySelectorAll('tr:not(.week-end-row)'));
-    rows.push(newRow);
-    rows.sort((a, b) => new Date(a.cells[1].textContent) - new Date(b.cells[1].textContent));
-
-    tableBody.innerHTML = '';
-    for (const row of rows) {
-      tableBody.appendChild(row);
-    }
-
-    const weekEndRow = document.createElement('tr');
-    weekEndRow.classList.add('week-end-row');
-    weekEndRow.innerHTML = `<td colspan="7" class="week-end-label">End of ${week}</td>`;
-    tableBody.appendChild(weekEndRow);
-
+    tableBody.appendChild(newRow);
     saveTableData();
   }
 
@@ -83,44 +53,41 @@ document.addEventListener('DOMContentLoaded', function () {
     const saved = localStorage.getItem('speakUpData');
     if (!saved) return;
     const rows = JSON.parse(saved);
-    rows.forEach(item => insertRow(item.week, item.day, item.tutor, item.topic, item.activities, item.attendees));
+    for (const item of rows) {
+      insertRow(item.week, item.day, item.tutor, item.topic, item.activities, item.attendees);
+    }
   }
 
   loadTableData();
 
   dateInput.addEventListener('change', function () {
-    const selectedDate = this.value;
-    const weekInfo = getWeekByDate(selectedDate);
+    const selectedDate = new Date(this.value);
+    const dayOfWeek = selectedDate.getDay();
 
-    const dayOfWeek = new Date(selectedDate).getDay();
     if ([0, 1, 6].includes(dayOfWeek)) {
       weekDisplay.textContent = "No class on Monday, Saturday or Sunday!";
       this.value = "";
       return;
     }
 
-    if (weekInfo) {
-      weekDisplay.textContent = weekInfo.week;
-    } else {
-      weekDisplay.textContent = "Date not in schedule";
-    }
+    const startDate = new Date("2025-06-24");
+    const diffInTime = selectedDate.getTime() - startDate.getTime();
+    const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+    const weekNumber = Math.floor(diffInDays / 7) + 1;
+    weekDisplay.textContent = `Week ${weekNumber}`;
   });
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
 
-    const currentWeek = getCurrentWeek();
-    const selectedWeek = getWeekByDate(dateInput.value);
-    if (!selectedWeek || !currentWeek || selectedWeek.week !== currentWeek.week) {
-      alert(`You can only insert data for ${currentWeek ? currentWeek.week : 'this week'}!`);
-      return;
-    }
-
     const week = weekDisplay.textContent.trim();
+    if (week.startsWith("No class")) return;
+
     const dateObj = new Date(dateInput.value);
     const options = { weekday: 'long' };
     const weekdayText = dateObj.toLocaleDateString('en-US', options);
     const day = `${dateInput.value} (${weekdayText})`;
+
     const tutor = document.getElementById('tutor').value.trim();
     const topic = document.getElementById('topic').value;
     const activities = document.getElementById('activities').value;
@@ -128,8 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let existingRow = null;
     for (const row of tableBody.rows) {
-      const weekCell = row.cells[0]?.textContent?.trim();
-      const tutorCell = row.cells[2]?.textContent?.trim();
+      const weekCell = row.cells[0].textContent.trim();
+      const tutorCell = row.cells[2].textContent.trim();
       if (weekCell === week && tutorCell === tutor) {
         existingRow = row;
         break;
@@ -146,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     form.reset();
-    weekDisplay.textContent = currentWeek ? currentWeek.week : "Week 1";
+    weekDisplay.textContent = "Week 1";
   });
 
   tableBody.addEventListener('click', function (event) {
@@ -157,7 +124,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (event.target.classList.contains('edit-btn')) {
       weekDisplay.textContent = row.cells[0].textContent;
-      dateInput.value = row.cells[1].textContent;
+      const rawDate = row.cells[1].textContent.split(' ')[0];
+      dateInput.value = rawDate;
       document.getElementById('tutor').value = row.cells[2].textContent;
       document.getElementById('topic').value = row.cells[3].textContent;
       document.getElementById('activities').value = row.cells[4].textContent;
