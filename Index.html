@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>English Speak Up Class | P2P</title>
-  <link rel="stylesheet" href="Style.css">
-  <img src="Pic.jpg" alt="P2P Logo" class="logo" />
+  <link rel="stylesheet" href="Style.css" />
   <style>
     table, th, td {
       border: 0.5px solid #ddd;
@@ -17,31 +16,35 @@
 </head>
 <body>
   <div class="container">
-    <div class="logo-wrapper">
+    <!-- Logo centered -->
+    <div class="logo-wrapper" style="text-align: center; margin-bottom: 1rem;">
+      <img src="Pic.jpg" alt="P2P Logo" class="logo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
     </div>
+
+    <!-- Form Section -->
     <form id="speakUpForm">
       <h1>English Speak Up Class <span class="brand">P2P</span></h1>
       <h2 id="weekDisplay">Week 1</h2>
 
       <label for="day">Select Date (June 24th - July 31st)</label>
-      <input type="date" id="day" name="day" min="2025-06-24" max="2025-07-31" required>
+      <input type="date" id="day" name="day" min="2025-06-24" max="2025-07-31" required />
 
       <label for="tutor">Tutor Name</label>
-      <input type="text" id="tutor" name="tutor" required>
+      <input type="text" id="tutor" name="tutor" required />
 
       <label for="topic">Topic</label>
-      <input type="text" id="topic" name="topic" required>
+      <input type="text" id="topic" name="topic" required />
 
       <label for="activities">Activities</label>
       <textarea id="activities" name="activities" rows="3" required></textarea>
 
       <label for="attendees">Number of Attendees</label>
-      <input type="number" id="attendees" name="attendees" min="0" required>
+      <input type="number" id="attendees" name="attendees" min="0" required />
 
       <button type="submit">Submit</button>
-      <link rel="stylesheet" href="Style.css" />
     </form>
 
+    <!-- Summary Table -->
     <table id="summaryTable">
       <thead>
         <tr>
