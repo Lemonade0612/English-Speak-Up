@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const cells = row.querySelectorAll('td');
       data.push({
         week: cells[0].textContent,
-        day: cells[1].textContent,
+        day: cells[1].getAttribute('data-date'),
         tutor: cells[2].textContent,
         topic: cells[3].textContent,
         activities: cells[4].textContent,
@@ -21,7 +21,14 @@ document.addEventListener('DOMContentLoaded', function () {
     localStorage.setItem('speakUpData', JSON.stringify(data));
   }
 
-  function insertRow(week, day, tutor, topic, activities, attendees) {
+  function updateAllDayLabels(dateStr, label) {
+    const rows = tableBody.querySelectorAll(`td[data-date="${dateStr}"]`);
+    rows.forEach(cell => {
+      cell.textContent = label;
+    });
+  }
+
+  function insertRow(week, dayLabel, dateStr, tutor, topic, activities, attendees) {
     const lastRow = tableBody.lastElementChild;
     const lastWeek = lastRow ? lastRow.cells[0]?.textContent?.trim() : null;
 
@@ -35,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const newRow = document.createElement('tr');
     newRow.innerHTML = `
       <td>${week}</td>
-      <td>${day}</td>
+      <td data-date="${dateStr}">${dayLabel}</td>
       <td>${tutor}</td>
       <td>${topic}</td>
       <td>${activities}</td>
@@ -46,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </td>
     `;
     tableBody.appendChild(newRow);
+    updateAllDayLabels(dateStr, dayLabel);
     saveTableData();
   }
 
@@ -54,7 +62,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!saved) return;
     const rows = JSON.parse(saved);
     for (const item of rows) {
-      insertRow(item.week, item.day, item.tutor, item.topic, item.activities, item.attendees);
+      const dateObj = new Date(item.day);
+      const options = { weekday: 'long' };
+      const weekdayText = dateObj.toLocaleDateString('en-US', options);
+      const fullLabel = `${weekdayText} ${item.day}`;
+      insertRow(item.week, fullLabel, item.day, item.tutor, item.topic, item.activities, item.attendees);
     }
   }
 
@@ -83,10 +95,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const week = weekDisplay.textContent.trim();
     if (week.startsWith("No class")) return;
 
-    const dateObj = new Date(dateInput.value);
+    const dateStr = dateInput.value;
+    const dateObj = new Date(dateStr);
     const options = { weekday: 'long' };
     const weekdayText = dateObj.toLocaleDateString('en-US', options);
-    const day = `${dateInput.value} (${weekdayText})`;
+    const dayLabel = `${weekdayText} ${dateStr}`;
 
     const tutor = document.getElementById('tutor').value.trim();
     const topic = document.getElementById('topic').value;
@@ -97,19 +110,19 @@ document.addEventListener('DOMContentLoaded', function () {
     for (const row of tableBody.rows) {
       const weekCell = row.cells[0].textContent.trim();
       const tutorCell = row.cells[2].textContent.trim();
-      if (weekCell === week && tutorCell === tutor) {
+      const dateAttr = row.cells[1].getAttribute('data-date');
+      if (weekCell === week && tutorCell === tutor && dateAttr === dateStr) {
         existingRow = row;
         break;
       }
     }
 
     if (existingRow) {
-      existingRow.cells[1].textContent = day;
       existingRow.cells[3].textContent = topic;
       existingRow.cells[4].textContent = activities;
       existingRow.cells[5].textContent = attendees;
     } else {
-      insertRow(week, day, tutor, topic, activities, attendees);
+      insertRow(week, dayLabel, dateStr, tutor, topic, activities, attendees);
     }
 
     form.reset();
@@ -124,8 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (event.target.classList.contains('edit-btn')) {
       weekDisplay.textContent = row.cells[0].textContent;
-      const rawDate = row.cells[1].textContent.split(' ')[0];
-      dateInput.value = rawDate;
+      dateInput.value = row.cells[1].getAttribute('data-date');
       document.getElementById('tutor').value = row.cells[2].textContent;
       document.getElementById('topic').value = row.cells[3].textContent;
       document.getElementById('activities').value = row.cells[4].textContent;
